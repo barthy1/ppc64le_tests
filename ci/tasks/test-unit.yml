@@ -1,0 +1,15 @@
+---
+platform: linux
+
+image: /var/vcap/store/bosh_rootfs
+  #  insecure_registries: ["172.29.161.184:5000"]
+
+inputs:
+  - name: bosh-src
+  - name: ppc64le-tests
+
+run:
+  path: ppc64le-tests/ci/tasks/test-unit.sh
+
+params:
+  RUBY_VERSION: replace-me

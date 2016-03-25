@@ -1,0 +1,100 @@
+---
+groups:
+  - name: bosh
+    jobs:
+      - start-job
+      - unit-2.1
+      - integration-2.1-mysql
+      - integration-2.1-postgres
+
+  - name: 2.1
+    jobs:
+      - start-job
+      - unit-2.1
+      - integration-2.1-mysql
+      - integration-2.1-postgres
+  - name: mysql
+    jobs:
+      - start-job
+      - unit-2.1
+      - integration-2.1-mysql
+
+  - name: postgres
+    jobs:
+      - start-job
+      - unit-2.1
+      - integration-2.1-postgres
+
+jobs:
+  - name: start-job
+    public: true
+    serial: true
+    plan:
+      - { get: interval-trigger, trigger: true }
+      - { get: bosh-src }
+      - { get: ppc64le-tests }
+
+  - name: unit-2.1
+    public: true
+    serial: true
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+    - task: test
+      file: ppc64le-tests/ci/tasks/test-unit.yml
+      config:
+        params:
+          RUBY_VERSION: 2.1.7
+
+  - name: integration-2.1-mysql
+    public: true
+    serial: true
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/test-integration.yml
+      config:
+        params:
+          DB:           mysql
+          RUBY_VERSION: 2.1.7
+          NUM_GROUPS: 2
+
+  - name: integration-2.1-postgres
+    public: true
+    serial: true
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/test-integration.yml
+      config:
+        params:
+          DB:           postgresql
+          RUBY_VERSION: 2.1.7
+          NUM_GROUPS: 2
+
+
+resources:
+  - name: interval-trigger
+    type: time
+    source:
+      interval: 90m # average build time for the integration tests
+
+  - name: ppc64le-tests
+    type: git
+    source:
+      uri: https://github.com/barthy1/ppc64le_tests.git
+      branch: master
+
+  - name: bosh-src
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh.git
+      branch: develop
