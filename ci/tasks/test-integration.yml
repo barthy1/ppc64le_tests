@@ -1,7 +1,7 @@
 ---
 platform: linux
 
-image: /var/vcap/store/bosh_rootfs
+image: docker://172.29.161.184:5000/bosh
 
 inputs:
 - name: bosh-src

@@ -1,0 +1,30 @@
+---
+groups:
+  - name: test
+    jobs:
+      - test
+
+jobs:
+  - name: test
+    public: true
+    serial: true
+    plan:
+      - get: input
+      - put: output
+
+resources:
+  - name: input-resource
+#image_resource:
+    type: docker-image
+    source:
+      repository: 172.29.161.184:5000/bosh
+      tag: latest
+      insecure_registries: ["172.29.161.184:5000"]
+
+  - name: output-resource
+    type: docker-image
+    source:
+      repository: 172.29.161.184:5000/bosh-test
+      tag: latest
+      insecure_registries: ["172.29.161.184:5000"]
+

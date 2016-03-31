@@ -37,7 +37,6 @@ cd bosh-src
 
 print_git_state
 
-#gem install nokogiri -v 1.6.6.2 -- --use-system-libraries --with-xml2-include=/usr/include/libxml2
 bundle install --local
 export GOROOT=/usr/local/go
 export GOPATH=$(pwd)/go

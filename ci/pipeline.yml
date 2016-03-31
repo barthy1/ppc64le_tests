@@ -3,27 +3,27 @@ groups:
   - name: bosh
     jobs:
       - start-job
-      - unit-2.1
-      - integration-2.1-mysql
-      - integration-2.1-postgres
+      - unit-2.3
+      - integration-2.3-mysql
+      - integration-2.3-postgres
 
-  - name: 2.1
+  - name: 2.3
     jobs:
       - start-job
-      - unit-2.1
-      - integration-2.1-mysql
-      - integration-2.1-postgres
+      - unit-2.3
+      - integration-2.3-mysql
+      - integration-2.3-postgres
   - name: mysql
     jobs:
       - start-job
-      - unit-2.1
-      - integration-2.1-mysql
+      - unit-2.3
+      - integration-2.3-mysql
 
   - name: postgres
     jobs:
       - start-job
-      - unit-2.1
-      - integration-2.1-postgres
+      - unit-2.3
+      - integration-2.3-postgres
 
 jobs:
   - name: start-job
@@ -34,7 +34,7 @@ jobs:
       - { get: bosh-src }
       - { get: ppc64le-tests }
 
-  - name: unit-2.1
+  - name: unit-2.3
     public: true
     serial: true
     plan:
@@ -42,12 +42,12 @@ jobs:
       - { get: bosh-src, trigger: true, passed: [start-job] }
       - { get: ppc64le-tests, trigger: false, passed: [start-job] }
     - task: test
+      privileged: true
       file: ppc64le-tests/ci/tasks/test-unit.yml
-      config:
-        params:
-          RUBY_VERSION: 2.1.7
+      params:
+        RUBY_VERSION: 2.3.1
 
-  - name: integration-2.1-mysql
+  - name: integration-2.3-mysql
     public: true
     serial: true
     plan:
@@ -58,13 +58,12 @@ jobs:
     - task: test
       privileged: true
       file: ppc64le-tests/ci/tasks/test-integration.yml
-      config:
-        params:
-          DB:           mysql
-          RUBY_VERSION: 2.1.7
-          NUM_GROUPS: 2
+      params:
+        DB:           mysql
+        RUBY_VERSION: 2.3.1
+        NUM_GROUPS: 2
 
-  - name: integration-2.1-postgres
+  - name: integration-2.3-postgres
     public: true
     serial: true
     plan:
@@ -74,11 +73,10 @@ jobs:
     - task: test
       privileged: true
       file: ppc64le-tests/ci/tasks/test-integration.yml
-      config:
-        params:
-          DB:           postgresql
-          RUBY_VERSION: 2.1.7
-          NUM_GROUPS: 2
+      params:
+        DB:           postgresql
+        RUBY_VERSION: 2.3.1
+        NUM_GROUPS: 2
 
 
 resources:
