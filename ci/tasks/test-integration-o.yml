@@ -1,7 +1,11 @@
 ---
-platform: linux
+platform: ppc64le
 
-image: docker://172.29.161.184:5000/bosh
+image_resource:
+  type: docker-image
+  source:
+    repository: 140.211.168.31:5000/bosh
+    insecure_registries: ["140.211.168.31:5000"]
 
 inputs:
 - name: bosh-src
@@ -14,6 +18,6 @@ params:
   RUBY_VERSION: replace-me
   DB:           replace-me
   LOG_LEVEL:    INFO
-  NUM_GROUPS:   8
+  NUM_GROUPS:   4
   GROUP:        1,2,3,4,5,6,7,8
   SPEC_PATH:    ~

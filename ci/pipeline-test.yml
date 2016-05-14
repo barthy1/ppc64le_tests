@@ -1,30 +1,208 @@
 ---
 groups:
-  - name: test
+  - name: bosh
     jobs:
-      - test
+      - start-job
+      - unit-2.3
+      - integration-2.3-mysql
+      - integration-2.3-postgres
+      - load-tests-postgres
+      - load-tests-mysql
+      - legacy-load-tests-postgres
+      - legacy-load-tests-mysql
+      - fuzz-tests
+        - unit-2.3-mysql
+        - unit-2.3-postgres
 
 jobs:
-  - name: test
+  - name: start-job
     public: true
     serial: true
     plan:
-      - get: input
-      - put: output
+      - { get: interval-trigger, trigger: true }
+      - { get: bosh-src }
+      - { get: ppc64le-tests }
+
+  - name: unit-2.3-postgres
+    public: true
+    serial: true
+    plan:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+      - task: test
+        file: ppc64le-tests/ci/tasks/test-unit.yml
+        privileged: true
+        params:
+          RUBY_VERSION: 2.3.1
+          DB: postgresql
+
+  - name: unit-2.3
+    public: true
+    serial: true
+    plan:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+      - task: test
+        file: ppc64le-tests/ci/tasks/test-unit.yml
+        params:
+          RUBY_VERSION: 2.3.1
+          DB: sqlite
+
+  - name: unit-2.3-mysql
+    public: true
+    serial: true
+    plan:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+      - task: test
+        file: ppc64le-tests/ci/tasks/test-unit.yml
+        privileged: true
+        params:
+          RUBY_VERSION: 2.3.1
+          DB: mysql
+
+  - name: integration-2.3-mysql
+    public: true
+    serial: false
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/test-integration.yml
+      params:
+        DB:           mysql
+        RUBY_VERSION: 2.3.1
+        NUM_GROUPS: 2
+
+  - name: integration-2.3-postgres
+    public: true
+    serial: false
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: true, passed: [start-job] }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/test-integration.yml
+      params:
+        DB:           postgresql
+        RUBY_VERSION: 2.3.1
+        NUM_GROUPS: 2
+
+  - name: load-tests-postgres
+    public: true
+    serial: false
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: false, passed: [start-job] }
+      - { get: bosh-load-tests-workspace }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job]}
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/load_test.yml
+      params:
+        DB: postgresql
+        RUBY_VERSION: 2.3.1
+        LEGACY: false
+
+  - name: load-tests-mysql
+    public: true
+    serial: false
+    plan:
+    - aggregate:
+      - { get: bosh-src, trigger: false, passed: [start-job] }
+      - { get: bosh-load-tests-workspace }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job]}
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/load_test.yml
+      params:
+        DB: mysql
+        RUBY_VERSION: 2.3.1
+        LEGACY: false
+
+  - name: legacy-load-tests-postgres
+    public: true
+    serial: false
+    plan:
+    - { get: bosh-src, trigger: false, passed: [start-job] }
+    - { get: bosh-load-tests-workspace }
+    - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/load_test.yml
+      params:
+        DB: postgresql
+        RUBY_VERSION: 2.3.1
+        LEGACY: true
+
+  - name: legacy-load-tests-mysql
+    public: true
+    serial: false
+    plan:
+    - { get: bosh-src, trigger: false, passed: [start-job] }
+    - { get: bosh-load-tests-workspace }
+    - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/load_test.yml
+      params:
+        DB: mysql
+        RUBY_VERSION: 2.3.1
+        LEGACY: true
+
+  - name: fuzz-tests
+    public: true
+    serial: false
+    plan:
+    - aggregate:
+      - { get: fuzz-interval-trigger, trigger: false }
+      - { get: bosh-src, trigger: false, passed: [start-job] }
+      - { get: bosh-fuzz-tests }
+      - { get: ppc64le-tests, trigger: false, passed: [start-job] }
+
+    - task: test
+      privileged: true
+      file: ppc64le-tests/ci/tasks/fuzz_test.yml
+      params:
+        RUBY_VERSION: 2.3.1
 
 resources:
-  - name: input-resource
-#image_resource:
-    type: docker-image
+  - name: interval-trigger
+    type: time
     source:
-      repository: 172.29.161.184:5000/bosh
-      tag: latest
-      insecure_registries: ["172.29.161.184:5000"]
+      interval: 90m # average build time for the integration tests
 
-  - name: output-resource
-    type: docker-image
+  - name: ppc64le-tests
+    type: git
     source:
-      repository: 172.29.161.184:5000/bosh-test
-      tag: latest
-      insecure_registries: ["172.29.161.184:5000"]
+      uri: https://github.com/barthy1/ppc64le_tests.git
+      branch: master
 
+  - name: bosh-load-tests-workspace
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry-incubator/bosh-load-tests-workspace
+      branch: master
+
+  - name: bosh-src
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh.git
+      branch: develop
+
+  - name: bosh-fuzz-tests
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry-incubator/bosh-fuzz-tests.git
+      branch: master
+
+  - name: fuzz-interval-trigger
+    type: time
+    source:
+      interval: 90m
